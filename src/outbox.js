@@ -1,5 +1,9 @@
 import { renderContent } from './lib/npf.js';
 
+const renderHTMLContent = (htmlText) => ({
+  content: Object.assign(document.createElement('template'), { innerHTML: htmlText }).content,
+});
+
 const anonymousAvatarSrc40 = chrome.runtime.getURL('anonymous_40.webp');
 const anonymousAvatarSrc96 = chrome.runtime.getURL('anonymous_96.webp');
 const anonymousAvatarSrcSet = `${anonymousAvatarSrc40} 40w, ${anonymousAvatarSrc96} 96w`;
@@ -31,7 +35,7 @@ const onDeleteButtonClicked = ({ currentTarget }) => {
   chrome.storage.local.remove(timestamp);
 };
 
-const constructItem = ([timestamp, { recipient, recipientUrl, error, content, layout }]) => {
+const constructItem = ([timestamp, { recipient, recipientUrl, error, content, layout, htmlText }]) => {
   const articleElement = Object.assign(document.createElement('article'), { tabIndex: -1 });
   Object.assign(articleElement.dataset, { timestamp });
 
@@ -56,7 +60,9 @@ const constructItem = ([timestamp, { recipient, recipientUrl, error, content, la
   const bodyElement = Object.assign(document.createElement('section'), { className: 'body' });
   articleElement.appendChild(bodyElement);
 
-  const { ask, content: renderedContent } = renderContent({ content, layout });
+  const { ask, content: renderedContent } = htmlText
+    ? renderHTMLContent(htmlText)
+    : renderContent({ content, layout });
 
   if (ask) {
     const askWrapper = Object.assign(document.createElement('div'), { className: 'ask-wrapper' });

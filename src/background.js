@@ -103,6 +103,44 @@ chrome.webRequest.onBeforeRequest.addListener(({ documentUrl, method, requestBod
   'requestBody'
 ]);
 
+chrome.webRequest.onBeforeRequest.addListener(({ documentUrl, method, requestBody, requestId, timeStamp, url }) => {
+  if (handledRequests.has(requestId)) {
+    return;
+  } else {
+    handledRequests.set(requestId, timeStamp);
+    chrome.storage.session.set({ [requestId]: timeStamp });
+  }
+
+  if (method !== 'POST') { return; }
+
+  let recipientUrl;
+
+  if (documentUrl) {
+    const addresseeUrl = Object.assign(new URL(documentUrl), { pathname: '/' });
+    recipientUrl = addresseeUrl.toString();
+  } else {
+    const { protocol, pathname } = new URL(url);
+    recipientUrl = `${protocol}//${pathname.replace('/submit_form/', '')}/`;
+  }
+
+  const { formData } = requestBody;
+  console.log(requestBody);
+
+  const titleHTMLText = formData['post[one]'] ? `<h1>${formData['post[one]']}</h1>` : '';
+
+  chrome.storage.local.set({
+    [timeStamp]: {
+      recipientUrl,
+      htmlText: titleHTMLText + formData['post[two]']
+    }
+  });
+}, {
+  urls: ['*://www.tumblr.com/submit_form/*?t='],
+  types: ['sub_frame']
+}, [
+  'requestBody'
+]);
+
 chrome.webRequest.onErrorOccurred.addListener(async ({ requestId }) => {
   const timeStamp =
     handledRequests.get(requestId) ??
@@ -118,7 +156,8 @@ chrome.webRequest.onErrorOccurred.addListener(async ({ requestId }) => {
     '*://www.tumblr.com/api/v2/blog/*/posts',
     '*://www.tumblr.com/api/v2/blog/*/posts/*',
     '*://www.tumblr.com/svc/post/ask',
-    '*://www.tumblr.com/ask_form/*?t='
+    '*://www.tumblr.com/ask_form/*?t=',
+    '*://www.tumblr.com/submit_form/*?t='
   ]
 });
 
@@ -137,7 +176,8 @@ chrome.webRequest.onCompleted.addListener(async ({ requestId, statusCode }) => {
     '*://www.tumblr.com/api/v2/blog/*/posts',
     '*://www.tumblr.com/api/v2/blog/*/posts/*',
     '*://www.tumblr.com/svc/post/ask',
-    '*://www.tumblr.com/ask_form/*?t='
+    '*://www.tumblr.com/ask_form/*?t=',
+    '*://www.tumblr.com/submit_form/*?t='
   ]
 });
 
